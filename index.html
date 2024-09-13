@@ -1,66 +1,407 @@
-<script>
-    // Função para buscar receitas usando a chave API
-    async function buscarReceitas() {
-        const listaReceitas = document.getElementById('receitas-lista');
-        listaReceitas.innerHTML = ''; // Limpa as receitas anteriores
-
-        const listaInventario = Array.from(document.getElementById('lista-inventario').getElementsByTagName('li')).map(item => item.textContent.split(' - ')[0]);
-
-        if (listaInventario.length === 0) {
-            alert('Adicione ingredientes ao inventário antes de buscar receitas.');
-            return;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Lista de Compras Inteligente</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
         }
 
-        // Converte o array de ingredientes em uma string separada por vírgulas
-        const ingredientes = listaInventario.join(',');
+        header {
+            background-color: #4CAF50;
+            color: #fff;
+            text-align: center;
+            padding: 1rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
 
-        // Aqui está o endpoint e sua chave API
-        const apiKey = '5816a49c37074249ac5877feb19a4edd';
-        const apiUrl = `https://api.exemplo.com/search?ingredients=${ingredientes}&apiKey=${apiKey}`;  // Altere a URL da API conforme a documentação
+        main {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
 
-        try {
-            // Fazendo a requisição à API
-            const response = await fetch(apiUrl);
-            const data = await response.json();
+        section {
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin: 10px;
+            padding: 20px;
+            width: calc(33% - 20px);
+            min-width: 300px;
+        }
 
-            // Verifica se retornou receitas
-            if (data && data.recipes && data.recipes.length > 0) {
-                data.recipes.forEach(receita => {
-                    const card = document.createElement('div');
-                    card.classList.add('receita-card');
+        h2 {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
 
-                    const img = document.createElement('img');
-                    img.src = receita.image || 'https://via.placeholder.com/150';
-                    card.appendChild(img);
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
 
-                    const nome = document.createElement('h3');
-                    nome.textContent = receita.title;
-                    card.appendChild(nome);
+        button {
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
 
-                    const ingredientesSection = document.createElement('div');
-                    ingredientesSection.classList.add('ingredientes-section');
+        button:hover {
+            background-color: #45a049;
+        }
 
-                    receita.ingredients.forEach(ingrediente => {
-                        const p = document.createElement('p');
-                        if (listaInventario.includes(ingrediente)) {
-                            p.textContent = ingrediente + ' ✔️';
-                            p.classList.add('ingrediente-possui');
-                        } else {
-                            p.textContent = ingrediente + ' ❌';
-                            p.classList.add('ingrediente-falta');
-                        }
-                        ingredientesSection.appendChild(p);
-                    });
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
 
-                    card.appendChild(ingredientesSection);
-                    listaReceitas.appendChild(card);
-                });
-            } else {
-                listaReceitas.innerHTML = '<p>Nenhuma receita encontrada para os ingredientes informados.</p>';
+        li {
+            background-color: #f9f9f9;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quantidade {
+            width: 60px;
+        }
+
+        #receitas-lista {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+
+        .receita-card {
+            width: 300px;
+            margin: 10px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            text-align: left;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .receita-card:hover {
+            transform: scale(1.02);
+        }
+
+        .receita-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .ingrediente-possui {
+            color: green;
+        }
+
+        .ingrediente-falta {
+            color: red;
+        }
+
+        .receita-detalhes {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .ingredientes-section {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+
+        .adicionar-lista-compras {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 12px;
+            margin: 2px 2px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🍽️ Minha Lista de Compras Inteligente</h1>
+    </header>
+    
+    <main>
+        <section id="lista-compras">
+            <h2>🛒 Lista de Compras</h2>
+            <input type="text" id="novo-item" placeholder="Adicione um item">
+            <button onclick="adicionarItem()">Adicionar</button>
+            <ul id="itens-lista">
+                <!-- Os itens da lista serão adicionados aqui dinamicamente -->
+            </ul>
+        </section>
+        
+        <section id="inventario">
+            <h2>🧺 Meu Inventário</h2>
+            <input type="text" id="novo-ingrediente" placeholder="Nome do ingrediente">
+            <input type="number" id="quantidade-ingrediente" placeholder="Qtd" class="quantidade">
+            <button onclick="adicionarAoInventario()">Adicionar ao Inventário</button>
+            <ul id="lista-inventario">
+                <!-- Os ingredientes do inventário serão adicionados aqui dinamicamente -->
+            </ul>
+        </section>
+        
+        <section id="sugestoes-receitas">
+            <h2>👨‍🍳 Sugestões de Receitas</h2>
+            <button onclick="buscarReceitas()">Buscar Receitas</button>
+            <div id="receitas-lista">
+                <!-- As sugestões de receitas serão adicionadas aqui dinamicamente -->
+            </div>
+        </section>
+    </main>
+    
+    <script>
+        const API_KEY = '5816a49c37074249ac5877feb19a4edd';
+
+        // Função para adicionar item à lista de compras
+        function adicionarItem() {
+            const novoItemInput = document.getElementById('novo-item');
+            const listaItens = document.getElementById('itens-lista');
+            
+            if (novoItemInput.value !== '') {
+                adicionarItemALista(novoItemInput.value);
+                novoItemInput.value = '';
             }
-        } catch (error) {
-            console.error('Erro ao buscar receitas:', error);
-            listaReceitas.innerHTML = '<p>Ocorreu um erro ao buscar as receitas. Tente novamente mais tarde.</p>';
         }
-    }
-</script>
+
+        function adicionarItemALista(item) {
+            const listaItens = document.getElementById('itens-lista');
+            const novoItem = document.createElement('li');
+            novoItem.textContent = item;
+            
+            const botaoRemover = document.createElement('button');
+            botaoRemover.textContent = 'Remover';
+            botaoRemover.onclick = function() {
+                listaItens.removeChild(novoItem);
+            };
+            
+            const botaoAdicionarInventario = document.createElement('button');
+            botaoAdicionarInventario.textContent = 'Adicionar ao Inventário';
+            botaoAdicionarInventario.onclick = function() {
+                adicionarAoInventario(item, 1);
+                listaItens.removeChild(novoItem);
+            };
+            
+            novoItem.appendChild(botaoRemover);
+            novoItem.appendChild(botaoAdicionarInventario);
+            listaItens.appendChild(novoItem);
+        }
+
+        // Funções para o inventário
+        function adicionarAoInventario(nomeIngrediente = null, quantidadeIngrediente = null) {
+            if (!nomeIngrediente) {
+                nomeIngrediente = document.getElementById('novo-ingrediente').value;
+            }
+            if (!quantidadeIngrediente) {
+                quantidadeIngrediente = document.getElementById('quantidade-ingrediente').value;
+            }
+            
+            if (nomeIngrediente && quantidadeIngrediente) {
+                const inventario = getInventario();
+                inventario[nomeIngrediente.toLowerCase()] = (inventario[nomeIngrediente.toLowerCase()] || 0) + parseInt(quantidadeIngrediente);
+                salvarInventario(inventario);
+                atualizarListaInventario();
+                
+                document.getElementById('novo-ingrediente').value = '';
+                document.getElementById('quantidade-ingrediente').value = '';
+            }
+        }
+
+        function getInventario() {
+            const inventarioSalvo = localStorage.getItem('inventario');
+            return inventarioSalvo ? JSON.parse(inventarioSalvo) : {};
+        }
+
+        function salvarInventario(inventario) {
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+        }
+
+        function atualizarListaInventario() {
+            const listaInventario = document.getElementById('lista-inventario');
+            listaInventario.innerHTML = '';
+            const inventario = getInventario();
+
+            for (const [ingrediente, quantidade] of Object.entries(inventario)) {
+                const li = document.createElement('li');
+                li.textContent = `${ingrediente}: ${quantidade}`;
+                
+                const botaoRemover = document.createElement('button');
+                botaoRemover.textContent = 'Remover';
+                botaoRemover.onclick = function() {
+                    delete inventario[ingrediente];
+                    salvarInventario(inventario);
+                    atualizarListaInventario();
+                };
+                
+                li.appendChild(botaoRemover);
+                listaInventario.appendChild(li);
+            }
+        }
+
+        // Funções para sugestões de receitas
+        async function buscarReceitas() {
+            const inventario = getInventario();
+            const ingredientes = Object.keys(inventario).join(',');
+
+            try {
+                const response = await fetch(`https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredientes}&number=5&apiKey=${API_KEY}`);
+                const data = await response.json();
+                exibirReceitas(data);
+            } catch (error) {
+                console.error('Erro ao buscar receitas:', error);
+                alert('Ocorreu um erro ao buscar as receitas. Por favor, tente novamente mais tarde.');
+            }
+        }
+
+        async function exibirReceitas(receitas) {
+            const receitasLista = document.getElementById('receitas-lista');
+            receitasLista.innerHTML = '';
+
+            for (const receita of receitas) {
+                const receitaCard = document.createElement('div');
+                receitaCard.className = 'receita-card';
+
+                const imagem = document.createElement('img');
+                imagem.src = receita.image;
+                imagem.alt = receita.title;
+
+                const titulo = document.createElement('h3');
+                titulo.textContent = await traduzirTexto(receita.title);
+
+                const ingredientesFaltando = document.createElement('p');
+                ingredientesFaltando.textContent = `Ingredientes faltando: ${receita.missedIngredientCount}`;
+
+                const botaoDetalhes = document.createElement('button');
+                botaoDetalhes.textContent = 'Ver Detalhes';
+                botaoDetalhes.onclick = async function() {
+                    const detalhes = await buscarDetalhesReceita(receita.id);
+                    exibirDetalhesReceita(receitaCard, detalhes, receita.usedIngredients, receita.missedIngredients);
+                };
+
+                receitaCard.appendChild(imagem);
+                receitaCard.appendChild(titulo);
+                receitaCard.appendChild(ingredientesFaltando);
+                receitaCard.appendChild(botaoDetalhes);
+
+                receitasLista.appendChild(receitaCard);
+            }
+        }
+
+        async function buscarDetalhesReceita(receitaId) {
+            try {
+                const response = await fetch(`https://api.spoonacular.com/recipes/${receitaId}/information?apiKey=${API_KEY}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Erro ao buscar detalhes da receita:', error);
+                return null;
+            }
+        }
+
+        async function exibirDetalhesReceita(receitaCard, detalhes, ingredientesPossuidos, ingredientesFaltando) {
+            const detalhesDiv = receitaCard.querySelector('.receita-detalhes') || document.createElement('div');
+            detalhesDiv.className = 'receita-detalhes';
+            detalhesDiv.innerHTML = '';
+
+            if (detalhes) {
+                const ingredientesPossuidosDiv = document.createElement('div');
+                ingredientesPossuidosDiv.className = 'ingredientes-section';
+                ingredientesPossuidosDiv.innerHTML = '<h4>Ingredientes que você possui:</h4>';
+                
+                const ingredientesFaltandoDiv = document.createElement('div');
+                ingredientesFaltandoDiv.className = 'ingredientes-section';
+                ingredientesFaltandoDiv.innerHTML = '<h4>Ingredientes que faltam:</h4>';
+                
+                const inventario = getInventario();
+
+                for (const ingrediente of ingredientesPossuidos) {
+                    const ingredienteTraduzido = await traduzirTexto(ingrediente.original);
+                    const li = document.createElement('li');
+                    li.textContent = ingredienteTraduzido;
+                    li.classList.add('ingrediente-possui');
+                    ingredientesPossuidosDiv.appendChild(li);
+                }
+
+                for (const ingrediente of ingredientesFaltando) {
+                    const ingredienteTraduzido = await traduzirTexto(ingrediente.original);
+                    const li = document.createElement('li');
+                    li.textContent = ingredienteTraduzido;
+                    li.classList.add('ingrediente-falta');
+                    
+                    const botaoAdicionar = document.createElement('button');
+                    botaoAdicionar.textContent = 'Adicionar à Lista de Compras';
+                    botaoAdicionar.className = 'adicionar-lista-compras';
+                    botaoAdicionar.onclick = function() {
+                        adicionarItemALista(ingrediente.name);
+                    };
+                    
+                    li.appendChild(botaoAdicionar);
+                    ingredientesFaltandoDiv.appendChild(li);
+                }
+
+                const instrucoes = document.createElement('div');
+                const instrucoesTraduzidasHTML = await traduzirTexto(detalhes.instructions);
+                instrucoes.innerHTML = `<h4>Modo de Preparo:</h4>${instrucoesTraduzidasHTML}`;
+
+                detalhesDiv.appendChild(ingredientesPossuidosDiv);
+                detalhesDiv.appendChild(ingredientesFaltandoDiv);
+                detalhesDiv.appendChild(instrucoes);
+            } else {
+                detalhesDiv.textContent = 'Não foi possível carregar os detalhes da receita.';
+            }
+
+            detalhesDiv.style.display = (detalhesDiv.style.display === 'none' || detalhesDiv.style.display === '') ? 'block' : 'none';
+            receitaCard.appendChild(detalhesDiv);
+        }
+
+        async function traduzirTexto(texto) {
+            try {
+                const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=en|pt-BR`);
+                const data = await response.json();
+                return data.responseData.translatedText;
+            } catch (error) {
+                console.error('Erro ao traduzir texto:', error);
+                return texto; // Retorna o texto original se houver erro na tradução
+            }
+        }
+
+        // Carregar o inventário ao iniciar a página
+        window.onload = function() {
+            atualizarListaInventario();
+        }
+    </script>
+</body>
+</html>
