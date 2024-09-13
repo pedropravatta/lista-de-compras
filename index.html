@@ -14,13 +14,10 @@
         }
 
         header {
-            background-color: #4CAF50;
+            background-color: #333;
             color: #fff;
             text-align: center;
             padding: 1rem;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
         }
 
         main {
@@ -36,32 +33,22 @@
             margin: 10px;
             padding: 20px;
             width: calc(33% - 20px);
-            min-width: 300px;
-        }
-
-        h2 {
-            color: #4CAF50;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 10px;
         }
 
         input, button {
             padding: 10px;
             margin: 5px 0;
-            border-radius: 5px;
-            border: 1px solid #ddd;
         }
 
         button {
-            background-color: #4CAF50;
+            background-color: #333;
             color: #fff;
             border: none;
             cursor: pointer;
-            transition: background-color 0.3s ease;
         }
 
         button:hover {
-            background-color: #45a049;
+            background-color: #555;
         }
 
         ul {
@@ -73,14 +60,11 @@
             background-color: #f9f9f9;
             margin: 5px 0;
             padding: 10px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-radius: 3px;
         }
 
         .quantidade {
-            width: 60px;
+            width: 50px;
         }
 
         #receitas-lista {
@@ -92,23 +76,15 @@
         .receita-card {
             width: 300px;
             margin: 10px;
-            padding: 15px;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
             text-align: left;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .receita-card:hover {
-            transform: scale(1.02);
         }
 
         .receita-card img {
             max-width: 100%;
             height: auto;
-            border-radius: 5px;
         }
 
         .ingrediente-possui {
@@ -122,9 +98,6 @@
         .receita-detalhes {
             display: none;
             margin-top: 10px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
         }
 
         .ingredientes-section {
@@ -132,7 +105,6 @@
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            background-color: #fff;
         }
 
         .adicionar-lista-compras {
@@ -146,18 +118,17 @@
             font-size: 12px;
             margin: 2px 2px;
             cursor: pointer;
-            border-radius: 3px;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>🍽️ Minha Lista de Compras Inteligente</h1>
+        <h1>Minha Lista de Compras Inteligente</h1>
     </header>
     
     <main>
         <section id="lista-compras">
-            <h2>🛒 Lista de Compras</h2>
+            <h2>Lista de Compras</h2>
             <input type="text" id="novo-item" placeholder="Adicione um item">
             <button onclick="adicionarItem()">Adicionar</button>
             <ul id="itens-lista">
@@ -166,9 +137,9 @@
         </section>
         
         <section id="inventario">
-            <h2>🧺 Meu Inventário</h2>
+            <h2>Meu Inventário</h2>
             <input type="text" id="novo-ingrediente" placeholder="Nome do ingrediente">
-            <input type="number" id="quantidade-ingrediente" placeholder="Qtd" class="quantidade">
+            <input type="number" id="quantidade-ingrediente" placeholder="Quantidade" class="quantidade">
             <button onclick="adicionarAoInventario()">Adicionar ao Inventário</button>
             <ul id="lista-inventario">
                 <!-- Os ingredientes do inventário serão adicionados aqui dinamicamente -->
@@ -176,7 +147,7 @@
         </section>
         
         <section id="sugestoes-receitas">
-            <h2>👨‍🍳 Sugestões de Receitas</h2>
+            <h2>Sugestões de Receitas</h2>
             <button onclick="buscarReceitas()">Buscar Receitas</button>
             <div id="receitas-lista">
                 <!-- As sugestões de receitas serão adicionadas aqui dinamicamente -->
@@ -291,6 +262,13 @@
             const receitasLista = document.getElementById('receitas-lista');
             receitasLista.innerHTML = '';
 
+            // Categorias de receitas
+            const receitasComPoucosIngredientes = document.createElement('div');
+            const receitasComMuitosIngredientes = document.createElement('div');
+
+            receitasComPoucosIngredientes.innerHTML = '<h3>Receitas com até 3 Ingredientes Faltantes</h3>';
+            receitasComMuitosIngredientes.innerHTML = '<h3>Receitas com Mais de 3 Ingredientes Faltantes</h3>';
+
             for (const receita of receitas) {
                 const receitaCard = document.createElement('div');
                 receitaCard.className = 'receita-card';
@@ -317,8 +295,16 @@
                 receitaCard.appendChild(ingredientesFaltando);
                 receitaCard.appendChild(botaoDetalhes);
 
-                receitasLista.appendChild(receitaCard);
+                // Adiciona a receita à categoria correta
+                if (receita.missedIngredientCount <= 3) {
+                    receitasComPoucosIngredientes.appendChild(receitaCard);
+                } else {
+                    receitasComMuitosIngredientes.appendChild(receitaCard);
+                }
             }
+
+            receitasLista.appendChild(receitasComPoucosIngredientes);
+            receitasLista.appendChild(receitasComMuitosIngredientes);
         }
 
         async function buscarDetalhesReceita(receitaId) {
@@ -383,7 +369,12 @@
                 detalhesDiv.textContent = 'Não foi possível carregar os detalhes da receita.';
             }
 
-            detalhesDiv.style.display = (detalhesDiv.style.display === 'none' || detalhesDiv.style.display === '') ? 'block' : 'none';
+            if (detalhesDiv.style.display === 'none' || detalhesDiv.style.display === '') {
+                detalhesDiv.style.display = 'block';
+            } else {
+                detalhesDiv.style.display = 'none';
+            }
+
             receitaCard.appendChild(detalhesDiv);
         }
 
