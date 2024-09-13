@@ -1,79 +1,66 @@
 <script>
-    // Função para adicionar um item à lista de compras
-    function adicionarItem() {
-        const novoItem = document.getElementById("novo-item").value;
-        if (novoItem.trim() !== "") {
-            const lista = document.getElementById("itens-lista");
-            const li = document.createElement("li");
-            li.innerHTML = novoItem + '<button onclick="removerItem(this)">Remover</button>';
-            lista.appendChild(li);
-            document.getElementById("novo-item").value = "";
+    // Função para buscar receitas usando a chave API
+    async function buscarReceitas() {
+        const listaReceitas = document.getElementById('receitas-lista');
+        listaReceitas.innerHTML = ''; // Limpa as receitas anteriores
+
+        const listaInventario = Array.from(document.getElementById('lista-inventario').getElementsByTagName('li')).map(item => item.textContent.split(' - ')[0]);
+
+        if (listaInventario.length === 0) {
+            alert('Adicione ingredientes ao inventário antes de buscar receitas.');
+            return;
         }
-    }
 
-    // Função para remover um item da lista de compras
-    function removerItem(button) {
-        const li = button.parentElement;
-        li.remove();
-    }
+        // Converte o array de ingredientes em uma string separada por vírgulas
+        const ingredientes = listaInventario.join(',');
 
-    // Função para adicionar ingredientes ao inventário
-    function adicionarAoInventario() {
-        const novoIngrediente = document.getElementById("novo-ingrediente").value;
-        const quantidade = document.getElementById("quantidade-ingrediente").value;
-        if (novoIngrediente.trim() !== "" && quantidade > 0) {
-            const lista = document.getElementById("lista-inventario");
-            const li = document.createElement("li");
-            li.innerHTML = novoIngrediente + " - " + quantidade + ' <button onclick="removerIngrediente(this)">Remover</button>';
-            lista.appendChild(li);
-            document.getElementById("novo-ingrediente").value = "";
-            document.getElementById("quantidade-ingrediente").value = "";
-        }
-    }
+        // Aqui está o endpoint e sua chave API
+        const apiKey = '5816a49c37074249ac5877feb19a4edd';
+        const apiUrl = `https://api.exemplo.com/search?ingredients=${ingredientes}&apiKey=${apiKey}`;  // Altere a URL da API conforme a documentação
 
-    // Função para remover um ingrediente do inventário
-    function removerIngrediente(button) {
-        const li = button.parentElement;
-        li.remove();
-    }
+        try {
+            // Fazendo a requisição à API
+            const response = await fetch(apiUrl);
+            const data = await response.json();
 
-    // Função para buscar receitas (simulada)
-    function buscarReceitas() {
-        const receitasLista = document.getElementById("receitas-lista");
+            // Verifica se retornou receitas
+            if (data && data.recipes && data.recipes.length > 0) {
+                data.recipes.forEach(receita => {
+                    const card = document.createElement('div');
+                    card.classList.add('receita-card');
 
-        // Simulação de receitas (em uma aplicação real, você faria uma chamada a uma API ou base de dados)
-        const receitas = [
-            {
-                nome: "Macarrão com Molho de Tomate",
-                imagem: "https://via.placeholder.com/150",
-                ingredientes: ["Macarrão", "Molho de Tomate", "Queijo"],
-                possui: ["Macarrão", "Molho de Tomate"]
-            },
-            {
-                nome: "Salada de Frutas",
-                imagem: "https://via.placeholder.com/150",
-                ingredientes: ["Banana", "Maçã", "Laranja"],
-                possui: ["Banana"]
+                    const img = document.createElement('img');
+                    img.src = receita.image || 'https://via.placeholder.com/150';
+                    card.appendChild(img);
+
+                    const nome = document.createElement('h3');
+                    nome.textContent = receita.title;
+                    card.appendChild(nome);
+
+                    const ingredientesSection = document.createElement('div');
+                    ingredientesSection.classList.add('ingredientes-section');
+
+                    receita.ingredients.forEach(ingrediente => {
+                        const p = document.createElement('p');
+                        if (listaInventario.includes(ingrediente)) {
+                            p.textContent = ingrediente + ' ✔️';
+                            p.classList.add('ingrediente-possui');
+                        } else {
+                            p.textContent = ingrediente + ' ❌';
+                            p.classList.add('ingrediente-falta');
+                        }
+                        ingredientesSection.appendChild(p);
+                    });
+
+                    card.appendChild(ingredientesSection);
+                    listaReceitas.appendChild(card);
+                });
+            } else {
+                listaReceitas.innerHTML = '<p>Nenhuma receita encontrada para os ingredientes informados.</p>';
             }
-        ];
-
-        receitasLista.innerHTML = ""; // Limpa a lista antes de adicionar novas receitas
-
-        receitas.forEach(receita => {
-            const card = document.createElement("div");
-            card.className = "receita-card";
-            card.innerHTML = `
-                <img src="${receita.imagem}" alt="Imagem da receita">
-                <h3>${receita.nome}</h3>
-                <p>Ingredientes: ${receita.ingredientes.map(ing => `<span class="${receita.possui.includes(ing) ? 'ingrediente-possui' : 'ingrediente-falta'}">${ing}</span>`).join(', ')}</p>
-                <button class="adicionar-lista-compras" onclick="adicionarReceitaAoCarrinho('${receita.nome}')">Adicionar à Lista de Compras</button>
-            `;
-            receitasLista.appendChild(card);
-        });
-    }
-
-    // Função para adicionar receita à lista de compras (simulada)
-    function adicionarReceitaAoCarrinho(nomeReceita) {
-        alert(`${nomeReceita} foi adicionada à lista de compras!`);
+        } catch (error) {
+            console.error('Erro ao buscar receitas:', error);
+            listaReceitas.innerHTML = '<p>Ocorreu um erro ao buscar as receitas. Tente novamente mais tarde.</p>';
+        }
     }
 </script>
