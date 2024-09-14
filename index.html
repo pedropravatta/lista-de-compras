@@ -213,157 +213,178 @@
         </section>
     </main>
     <script>
-        const API_KEY = '5816a49c37074249ac5877feb19a4edd';
 
-        // Função para adicionar item à lista de compras
-        function adicionarItem() {
-            const novoItemInput = document.getElementById('novo-item');
-            const listaItens = document.getElementById('itens-lista');
-            
-            if (novoItemInput.value !== '') {
-                adicionarItemALista(novoItemInput.value);
-                novoItemInput.value = '';
+// Se estiver usando Node.js, e o pacote google-translator está instalado
+const translator = require('google-translator');
+
+// Função para traduzir texto usando o google-translator
+function traduzirTexto(texto, idiomaAlvo = 'pt') {
+    return new Promise((resolve, reject) => {
+        translator('en', idiomaAlvo, texto, response => {
+            if (response.error) {
+                reject(response.error);
+            } else {
+                resolve(response);
             }
+        });
+    });
+}
+
+// Exemplo de uso da função de tradução
+async function exemploTraducao() {
+    try {
+        const traducao = await traduzirTexto('Hello');
+        console.log(traducao);
+    } catch (error) {
+        console.error('Erro ao traduzir:', error);
+    }
+}
+
+// Chave da API do Spoonacular
+const API_KEY = '5816a49c37074249ac5877feb19a4edd'; 
+
+function adicionarItem() {
+    const novoItemInput = document.getElementById('novo-item');
+    const listaItens = document.getElementById('itens-lista');
+    
+    if (novoItemInput.value !== '') {
+        adicionarItemALista(novoItemInput.value);
+        novoItemInput.value = '';
+    }
+}
+
+function adicionarItemALista(item) {
+    const listaItens = document.getElementById('itens-lista');
+    const novoItem = document.createElement('li');
+    novoItem.textContent = item;
+    
+    const botaoRemover = document.createElement('button');
+    botaoRemover.textContent = 'Remover';
+    botaoRemover.onclick = function() {
+        listaItens.removeChild(novoItem);
+    };
+    
+    const botaoAdicionarInventario = document.createElement('button');
+    botaoAdicionarInventario.textContent = 'Adicionar ao Inventário';
+    botaoAdicionarInventario.onclick = function() {
+        adicionarAoInventario(item, 1);
+        listaItens.removeChild(novoItem);
+    };
+    
+    novoItem.appendChild(botaoRemover);
+    novoItem.appendChild(botaoAdicionarInventario);
+    listaItens.appendChild(novoItem);
+}
+
+function adicionarAoInventario(nomeIngrediente = null, quantidadeIngrediente = null) {
+    if (!nomeIngrediente) {
+        nomeIngrediente = document.getElementById('novo-ingrediente').value;
+    }
+    if (!quantidadeIngrediente) {
+        quantidadeIngrediente = document.getElementById('quantidade-ingrediente').value;
+    }
+    
+    if (nomeIngrediente && quantidadeIngrediente) {
+        const inventario = getInventario();
+        inventario[nomeIngrediente.toLowerCase()] = (inventario[nomeIngrediente.toLowerCase()] || 0) + parseInt(quantidadeIngrediente);
+        salvarInventario(inventario);
+        atualizarListaInventario();
+        
+        document.getElementById('novo-ingrediente').value = '';
+        document.getElementById('quantidade-ingrediente').value = '';
+    }
+}
+
+function getInventario() {
+    const inventarioSalvo = localStorage.getItem('inventario');
+    return inventarioSalvo ? JSON.parse(inventarioSalvo) : {};
+}
+
+function salvarInventario(inventario) {
+    localStorage.setItem('inventario', JSON.stringify(inventario));
+}
+
+function atualizarListaInventario() {
+    const listaInventario = document.getElementById('lista-inventario');
+    listaInventario.innerHTML = '';
+    const inventario = getInventario();
+
+    for (const [ingrediente, quantidade] of Object.entries(inventario)) {
+        const li = document.createElement('li');
+        li.textContent = `${ingrediente}: ${quantidade}`;
+        
+        const botaoRemover = document.createElement('button');
+        botaoRemover.textContent = 'Remover';
+        botaoRemover.onclick = function() {
+            delete inventario[ingrediente];
+            salvarInventario(inventario);
+            atualizarListaInventario();
+        };
+        
+        li.appendChild(botaoRemover);
+        listaInventario.appendChild(li);
+    }
+}
+
+async function buscarReceitas() {
+    const inventario = getInventario();
+    const ingredientes = Object.keys(inventario);
+    
+    if (ingredientes.length === 0) {
+        alert('Seu inventário está vazio.');
+        return;
+    }
+
+    const ingredientesString = ingredientes.join(',');
+    const resposta = await fetch(`https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredientesString}&number=5&apiKey=${API_KEY}`);
+    const receitas = await resposta.json();
+    const receitasLista = document.getElementById('receitas-lista');
+    receitasLista.innerHTML = '';
+
+    for (const receita of receitas) {
+        const card = document.createElement('div');
+        card.classList.add('receita-card');
+        
+        const imagem = document.createElement('img');
+        imagem.src = receita.image;
+        card.appendChild(imagem);
+        
+        const titulo = document.createElement('h3');
+        titulo.textContent = await traduzirTexto(receita.title, 'pt');
+        card.appendChild(titulo);
+        
+        const detalhes = document.createElement('div');
+        detalhes.classList.add('receita-detalhes');
+        
+        const ingredientesTitulo = document.createElement('h4');
+        ingredientesTitulo.textContent = 'Ingredientes:';
+        detalhes.appendChild(ingredientesTitulo);
+        
+        const ingredientesList = document.createElement('ul');
+        for (const ingrediente of receita.missedIngredients) {
+            const li = document.createElement('li');
+            li.textContent = await traduzirTexto(ingrediente.name, 'pt');
+            li.classList.add('ingrediente-falta');
+            ingredientesList.appendChild(li);
         }
-
-        function adicionarItemALista(item) {
-            const listaItens = document.getElementById('itens-lista');
-            const novoItem = document.createElement('li');
-            novoItem.textContent = item;
-            
-            const botaoRemover = document.createElement('button');
-            botaoRemover.textContent = 'Remover';
-            botaoRemover.onclick = function() {
-                listaItens.removeChild(novoItem);
-            };
-            
-            const botaoAdicionarInventario = document.createElement('button');
-            botaoAdicionarInventario.textContent = 'Adicionar ao Inventário';
-            botaoAdicionarInventario.onclick = function() {
-                adicionarAoInventario(item, 1);
-                listaItens.removeChild(novoItem);
-            };
-            
-            novoItem.appendChild(botaoRemover);
-            novoItem.appendChild(botaoAdicionarInventario);
-            listaItens.appendChild(novoItem);
+        for (const ingrediente of receita.usedIngredients) {
+            const li = document.createElement('li');
+            li.textContent = await traduzirTexto(ingrediente.name, 'pt');
+            li.classList.add('ingrediente-possui');
+            ingredientesList.appendChild(li);
         }
+        detalhes.appendChild(ingredientesList);
+        
+        const modoPreparo = document.createElement('p');
+        modoPreparo.textContent = await traduzirTexto(receita.instructions || 'Instruções não disponíveis', 'pt');
+        detalhes.appendChild(modoPreparo);
+        
+        card.appendChild(detalhes);
+        receitasLista.appendChild(card);
+    }
+}
 
-        // Funções para o inventário
-        function adicionarAoInventario(nomeIngrediente = null, quantidadeIngrediente = null) {
-            if (!nomeIngrediente) {
-                nomeIngrediente = document.getElementById('novo-ingrediente').value;
-            }
-            if (!quantidadeIngrediente) {
-                quantidadeIngrediente = document.getElementById('quantidade-ingrediente').value;
-            }
-            
-            if (nomeIngrediente && quantidadeIngrediente) {
-                const inventario = getInventario();
-                inventario[nomeIngrediente.toLowerCase()] = (inventario[nomeIngrediente.toLowerCase()] || 0) + parseInt(quantidadeIngrediente);
-                salvarInventario(inventario);
-                atualizarListaInventario();
-                
-                document.getElementById('novo-ingrediente').value = '';
-                document.getElementById('quantidade-ingrediente').value = '';
-            }
-        }
-
-        function getInventario() {
-            const inventarioSalvo = localStorage.getItem('inventario');
-            return inventarioSalvo ? JSON.parse(inventarioSalvo) : {};
-        }
-
-        function salvarInventario(inventario) {
-            localStorage.setItem('inventario', JSON.stringify(inventario));
-        }
-
-        function atualizarListaInventario() {
-            const listaInventario = document.getElementById('lista-inventario');
-            listaInventario.innerHTML = '';
-            const inventario = getInventario();
-
-            for (const [ingrediente, quantidade] of Object.entries(inventario)) {
-                const item = document.createElement('li');
-                item.textContent = `${ingrediente} - ${quantidade}`;
-                
-                const botaoRemover = document.createElement('button');
-                botaoRemover.textContent = 'Remover';
-                botaoRemover.onclick = function() {
-                    delete inventario[ingrediente];
-                    salvarInventario(inventario);
-                    atualizarListaInventario();
-                };
-                
-                item.appendChild(botaoRemover);
-                listaInventario.appendChild(item);
-            }
-        }
-
-        // Função para buscar receitas
-        function buscarReceitas() {
-            const inventario = getInventario();
-            const ingredientes = Object.keys(inventario);
-            
-            if (ingredientes.length === 0) {
-                alert('Adicione ingredientes ao inventário primeiro!');
-                return;
-            }
-
-            const query = ingredientes.join(',');
-            fetch(`https://api.spoonacular.com/recipes/findByIngredients?ingredients=${query}&apiKey=${API_KEY}`)
-                .then(response => response.json())
-                .then(data => mostrarReceitas(data))
-                .catch(error => console.error('Erro:', error));
-        }
-
-        function mostrarReceitas(receitas) {
-            const receitasLista = document.getElementById('receitas-lista');
-            receitasLista.innerHTML = '';
-
-            receitas.forEach(receita => {
-                const card = document.createElement('div');
-                card.classList.add('receita-card');
-                
-                const img = document.createElement('img');
-                img.src = receita.image;
-                img.alt = receita.title;
-                card.appendChild(img);
-                
-                const titulo = document.createElement('h3');
-                titulo.textContent = receita.title;
-                card.appendChild(titulo);
-                
-                const detalhes = document.createElement('div');
-                detalhes.classList.add('receita-detalhes');
-                
-                const listaIngredientes = document.createElement('ul');
-                receita.usedIngredients.forEach(ing => {
-                    const li = document.createElement('li');
-                    li.classList.add('ingrediente-possui');
-                    li.textContent = `${ing.name}`;
-                    listaIngredientes.appendChild(li);
-                });
-                receita.missedIngredients.forEach(ing => {
-                    const li = document.createElement('li');
-                    li.classList.add('ingrediente-falta');
-                    li.textContent = `${ing.name}`;
-                    listaIngredientes.appendChild(li);
-                });
-
-                detalhes.appendChild(listaIngredientes);
-                card.appendChild(detalhes);
-
-                card.addEventListener('click', () => {
-                    detalhes.style.display = detalhes.style.display === 'none' || detalhes.style.display === '' ? 'block' : 'none';
-                });
-
-                receitasLista.appendChild(card);
-            });
-        }
-
-        // Inicializar a lista de inventário ao carregar a página
-        document.addEventListener('DOMContentLoaded', atualizarListaInventario);
-    </script>
-</body>
-</html>
+// Carregar o inventário ao iniciar a página
+window.onload = function() {
+    atualizarListaInventario();
+}
